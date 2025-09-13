@@ -1,0 +1,375 @@
+--Google BigQuery Commands--
+
+
+/*
+-- Replace project + dataset names with your actual ones
+CREATE OR REPLACE TABLE `survey-data-updated.survey_data_updated.languages_cleaned` AS
+WITH base AS (
+  SELECT
+    ResponseId,
+    SPLIT(LanguageHaveWorkedWith, ";") AS langs
+  FROM `survey-data-updated.survey_data_updated.survey_data_updated`
+)
+SELECT
+  ResponseId,
+  TRIM(lang) AS Language
+FROM base,
+UNNEST(langs) AS lang
+WHERE TRIM(lang) IS NOT NULL
+  AND TRIM(lang) <> ""
+;
+*/
+/*
+CREATE OR REPLACE TABLE `survey-data-updated.survey_data_updated.languages_cleaned` AS
+WITH base AS (
+  SELECT
+    ResponseId,
+    Age,
+    SPLIT(LanguageHaveWorkedWith, ";") AS langs
+  FROM `survey-data-updated.survey_data_updated.survey_data_updated`
+)
+SELECT
+  ResponseId,
+  Age,
+  TRIM(lang) AS Language
+FROM base,
+UNNEST(langs) AS lang
+WHERE TRIM(lang) IS NOT NULL
+  AND TRIM(lang) <> ""
+;
+*/
+/*
+-- Split multi-select databases into one row per database
+CREATE OR REPLACE TABLE `survey-data-updated.survey_data_updated.databases_cleaned` AS
+WITH base AS (
+  SELECT
+    ResponseId,
+    Age,
+    SPLIT(DatabaseHaveWorkedWith, ';') AS dbs
+  FROM `survey-data-updated.survey_data_updated.survey_data_updated`
+)
+SELECT
+  ResponseId,
+  Age,
+  TRIM(db) AS Database
+FROM base,
+UNNEST(dbs) AS db
+WHERE TRIM(db) IS NOT NULL
+  AND TRIM(db) <> '';
+*/
+/*
+-- Creates one row per respondent–platform, carrying Age for breakdowns
+CREATE OR REPLACE TABLE `survey-data-updated.survey_data_updated.platforms_cleaned` AS
+WITH base AS (
+  SELECT
+    ResponseId,
+    Age,
+    SPLIT(PlatformHaveWorkedWith, ';') AS plats
+  FROM `survey-data-updated.survey_data_updated.survey_data_updated`
+),
+expanded AS (
+  SELECT
+    ResponseId,
+    Age,
+    TRIM(p) AS Platform
+  FROM base, UNNEST(plats) AS p
+  WHERE TRIM(p) IS NOT NULL AND TRIM(p) <> ''
+)
+SELECT
+  ResponseId,
+  Age,
+  Platform
+FROM expanded;
+*/
+/*
+CREATE OR REPLACE TABLE `survey-data-updated.survey_data_updated.frameworks_cleaned` AS
+WITH base AS (
+  SELECT
+    ResponseId,
+    Age,
+    SPLIT(WebframeHaveWorkedWith, ';') AS fwks
+  FROM `survey-data-updated.survey_data_updated.survey_data_updated`
+),
+expanded AS (
+  SELECT
+    ResponseId,
+    Age,
+    TRIM(f) AS Framework
+  FROM base, UNNEST(fwks) AS f
+  WHERE TRIM(f) IS NOT NULL AND TRIM(f) <> ''
+)
+SELECT
+  ResponseId,
+  Age,
+  Framework
+FROM expanded;
+*/
+/*
+SELECT 
+  table_name,
+  column_name,
+  data_type
+FROM `survey-data-updated.survey_data_updated.INFORMATION_SCHEMA.COLUMNS`
+WHERE STARTS_WITH(column_name, 'E')
+ORDER BY table_name, column_name;
+*/
+/*
+-- Adds numeric years you can use on the Y-axis
+CREATE OR REPLACE TABLE `survey-data-updated.survey_data_updated.frameworks_cleaned` AS
+WITH base AS (
+  SELECT
+    ResponseId,
+    Age,
+    Country,
+    YearsCode,
+    YearsCodePro,
+    SPLIT(WebframeHaveWorkedWith, ';') AS fwks
+  FROM `survey-data-updated.survey_data_updated.survey_data_updated`
+),
+expanded AS (
+  SELECT
+    ResponseId,
+    Age,
+    Country,
+    YearsCode,
+    YearsCodePro,
+    TRIM(f) AS Framework
+  FROM base, UNNEST(fwks) AS f
+  WHERE TRIM(f) IS NOT NULL AND TRIM(f) <> ''
+),
+typed AS (
+  SELECT
+    *,
+    -- convert YearsCodePro to a number
+    CASE
+      WHEN LOWER(YearsCodePro) = 'less than 1 year' THEN 0.5
+      WHEN LOWER(YearsCodePro) = 'more than 50 years' THEN 51
+      WHEN SAFE_CAST(YearsCodePro AS FLOAT64) IS NOT NULL THEN SAFE_CAST(YearsCodePro AS FLOAT64)
+      ELSE NULL
+    END AS YearsCodeProNum
+  FROM expanded
+)
+SELECT
+  ResponseId, Age, Country, YearsCode, YearsCodePro, YearsCodeProNum, Framework
+FROM typed;
+*/
+/*
+CREATE OR REPLACE TABLE `survey-data-updated.survey_data_updated.languages_want_cleaned` AS
+WITH base AS (
+  SELECT
+    ResponseId, Age, Country, YearsCode, YearsCodePro,
+    SPLIT(LanguageWantToWorkWith, ';') AS items
+  FROM `survey-data-updated.survey_data_updated.survey_data_updated`
+),
+expanded AS (
+  SELECT
+    ResponseId, Age, Country, YearsCode, YearsCodePro,
+    TRIM(item) AS Language
+  FROM base, UNNEST(items) AS item
+  WHERE TRIM(item) IS NOT NULL AND TRIM(item) <> ''
+),
+typed AS (
+  SELECT
+    *,
+    CASE
+      WHEN LOWER(YearsCode) = 'less than 1 year' THEN 0.5
+      WHEN LOWER(YearsCode) = 'more than 50 years' THEN 51
+      WHEN SAFE_CAST(YearsCode AS FLOAT64) IS NOT NULL THEN SAFE_CAST(YearsCode AS FLOAT64)
+      ELSE NULL
+    END AS YearsCodeNum,
+    CASE
+      WHEN LOWER(YearsCodePro) = 'less than 1 year' THEN 0.5
+      WHEN LOWER(YearsCodePro) = 'more than 50 years' THEN 51
+      WHEN SAFE_CAST(YearsCodePro AS FLOAT64) IS NOT NULL THEN SAFE_CAST(YearsCodePro AS FLOAT64)
+      ELSE NULL
+    END AS YearsCodeProNum
+  FROM expanded
+)
+SELECT
+  ResponseId, Age, Country, YearsCode, YearsCodePro, YearsCodeNum, YearsCodeProNum, Language
+FROM typed;
+*/
+/*
+CREATE OR REPLACE TABLE `survey-data-updated.survey_data_updated.languages_want_cleaned` AS
+WITH base AS (
+  SELECT
+    ResponseId, Age, Country, YearsCode, YearsCodePro,
+    SPLIT(LanguageWantToWorkWith, ';') AS items
+  FROM `survey-data-updated.survey_data_updated.survey_data_updated`
+),
+expanded AS (
+  SELECT
+    ResponseId, Age, Country, YearsCode, YearsCodePro,
+    TRIM(item) AS Language
+  FROM base, UNNEST(items) AS item
+  WHERE TRIM(item) IS NOT NULL AND TRIM(item) <> ''
+),
+typed AS (
+  SELECT
+    *,
+    CASE
+      WHEN LOWER(YearsCode) = 'less than 1 year' THEN 0.5
+      WHEN LOWER(YearsCode) = 'more than 50 years' THEN 51
+      WHEN SAFE_CAST(YearsCode AS FLOAT64) IS NOT NULL THEN SAFE_CAST(YearsCode AS FLOAT64)
+      ELSE NULL
+    END AS YearsCodeNum,
+    CASE
+      WHEN LOWER(YearsCodePro) = 'less than 1 year' THEN 0.5
+      WHEN LOWER(YearsCodePro) = 'more than 50 years' THEN 51
+      WHEN SAFE_CAST(YearsCodePro AS FLOAT64) IS NOT NULL THEN SAFE_CAST(YearsCodePro AS FLOAT64)
+      ELSE NULL
+    END AS YearsCodeProNum_raw
+  FROM expanded
+)
+SELECT
+  ResponseId, Age, Country, YearsCode, YearsCodePro,
+  IFNULL(YearsCodeNum, 0) AS YearsCodeNum,
+  IFNULL(YearsCodeProNum_raw, 0) AS YearsCodeProNum,
+  Language
+FROM typed;
+*/
+/*
+CREATE OR REPLACE TABLE `survey-data-updated.survey_data_updated.databases_want_cleaned` AS
+WITH base AS (
+  SELECT
+    ResponseId, Age, Country, YearsCode, YearsCodePro,
+    SPLIT(DatabaseWantToWorkWith, ';') AS items
+  FROM `survey-data-updated.survey_data_updated.survey_data_updated`
+),
+expanded AS (
+  SELECT
+    ResponseId, Age, Country, YearsCode, YearsCodePro,
+    TRIM(item) AS Database
+  FROM base, UNNEST(items) AS item
+  WHERE TRIM(item) IS NOT NULL AND TRIM(item) <> ''
+),
+typed AS (
+  SELECT
+    *,
+    CASE
+      WHEN LOWER(YearsCode) = 'less than 1 year' THEN 0.5
+      WHEN LOWER(YearsCode) = 'more than 50 years' THEN 51
+      WHEN SAFE_CAST(YearsCode AS FLOAT64) IS NOT NULL THEN SAFE_CAST(YearsCode AS FLOAT64)
+      ELSE NULL
+    END AS YearsCodeNum,
+    CASE
+      WHEN LOWER(YearsCodePro) = 'less than 1 year' THEN 0.5
+      WHEN LOWER(YearsCodePro) = 'more than 50 years' THEN 51
+      WHEN SAFE_CAST(YearsCodePro AS FLOAT64) IS NOT NULL THEN SAFE_CAST(YearsCodePro AS FLOAT64)
+      ELSE NULL
+    END AS YearsCodeProNum_raw
+  FROM expanded
+)
+SELECT
+  ResponseId, Age, Country, YearsCode, YearsCodePro,
+  IFNULL(YearsCodeNum,0) AS YearsCodeNum,
+  IFNULL(YearsCodeProNum_raw,0) AS YearsCodeProNum,
+  Database
+FROM typed;
+*/
+/*
+CREATE OR REPLACE TABLE `survey-data-updated.survey_data_updated.platforms_want_cleaned` AS
+WITH base AS (
+  SELECT
+    ResponseId, Age, Country, YearsCode, YearsCodePro,
+    SPLIT(PlatformWantToWorkWith, ';') AS items
+  FROM `survey-data-updated.survey_data_updated.survey_data_updated`
+),
+expanded AS (
+  SELECT
+    ResponseId, Age, Country, YearsCode, YearsCodePro,
+    TRIM(item) AS Platform
+  FROM base, UNNEST(items) AS item
+  WHERE TRIM(item) IS NOT NULL AND TRIM(item) <> ''
+),
+typed AS (
+  SELECT
+    *,
+    CASE
+      WHEN LOWER(YearsCode) = 'less than 1 year' THEN 0.5
+      WHEN LOWER(YearsCode) = 'more than 50 years' THEN 51
+      WHEN SAFE_CAST(YearsCode AS FLOAT64) IS NOT NULL THEN SAFE_CAST(YearsCode AS FLOAT64)
+      ELSE NULL
+    END AS YearsCodeNum,
+    CASE
+      WHEN LOWER(YearsCodePro) = 'less than 1 year' THEN 0.5
+      WHEN LOWER(YearsCodePro) = 'more than 50 years' THEN 51
+      WHEN SAFE_CAST(YearsCodePro AS FLOAT64) IS NOT NULL THEN SAFE_CAST(YearsCodePro AS FLOAT64)
+      ELSE NULL
+    END AS YearsCodeProNum_raw
+  FROM expanded
+)
+SELECT
+  ResponseId, Age, Country, YearsCode, YearsCodePro,
+  IFNULL(YearsCodeNum,0) AS YearsCodeNum,
+  IFNULL(YearsCodeProNum_raw,0) AS YearsCodeProNum,
+  Platform
+FROM typed;
+*/
+/*
+CREATE OR REPLACE TABLE `survey-data-updated.survey_data_updated.frameworks_want_cleaned` AS
+WITH base AS (
+  SELECT
+    ResponseId, Age, Country, YearsCode, YearsCodePro,
+    SPLIT(WebframeWantToWorkWith, ';') AS items
+  FROM `survey-data-updated.survey_data_updated.survey_data_updated`
+),
+expanded AS (
+  SELECT
+    ResponseId, Age, Country, YearsCode, YearsCodePro,
+    TRIM(item) AS Framework
+  FROM base, UNNEST(items) AS item
+  WHERE TRIM(item) IS NOT NULL AND TRIM(item) <> ''
+),
+typed AS (
+  SELECT
+    *,
+    CASE
+      WHEN LOWER(YearsCode) = 'less than 1 year' THEN 0.5
+      WHEN LOWER(YearsCode) = 'more than 50 years' THEN 51
+      WHEN SAFE_CAST(YearsCode AS FLOAT64) IS NOT NULL THEN SAFE_CAST(YearsCode AS FLOAT64)
+      ELSE NULL
+    END AS YearsCodeNum,
+    CASE
+      WHEN LOWER(YearsCodePro) = 'less than 1 year' THEN 0.5
+      WHEN LOWER(YearsCodePro) = 'more than 50 years' THEN 51
+      WHEN SAFE_CAST(YearsCodePro AS FLOAT64) IS NOT NULL THEN SAFE_CAST(YearsCodePro AS FLOAT64)
+      ELSE NULL
+    END AS YearsCodeProNum_raw
+  FROM expanded
+)
+SELECT
+  ResponseId, Age, Country, YearsCode, YearsCodePro,
+  IFNULL(YearsCodeNum,0) AS YearsCodeNum,
+  IFNULL(YearsCodeProNum_raw,0) AS YearsCodeProNum,
+  Framework
+FROM typed;
+*/
+/*
+SELECT 
+  column_name, data_type, is_nullable
+FROM `survey-data-updated.survey_data_updated.INFORMATION_SCHEMA.COLUMNS`
+WHERE table_name = 'survey_data_updated'
+ORDER BY ordinal_position;
+*/
+
+-- Respondent distribution by Education Level with % of total
+CREATE OR REPLACE TABLE `survey-data-updated.survey_data_updated.edlevel_summary` AS
+WITH base AS (
+  SELECT
+    EdLevel,
+    COUNT(ResponseId) AS respondent_count
+  FROM `survey-data-updated.survey_data_updated.survey_data_updated`
+  WHERE EdLevel IS NOT NULL
+  GROUP BY EdLevel
+),
+totals AS (
+  SELECT SUM(respondent_count) AS total_count FROM base
+)
+SELECT
+  b.EdLevel,
+  b.respondent_count,
+  ROUND(b.respondent_count / t.total_count, 4) AS percent_of_total
+FROM base b
+CROSS JOIN totals t
+ORDER BY respondent_count DESC;
